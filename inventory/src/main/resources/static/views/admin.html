@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="./plugins/layui2.5/css/layui.css">
+<script type="text/javascript" src="./plugins/layui2.5/layui.js"></script>
+<title>Insert title here</title>
+</head>
+<style>
+  body{
+    padding: 20px;
+  }
+  .layui-input-block{
+    width: 80%;
+  }
+  .layui-inline{
+  	margin-bottom: 20px;
+  }
+</style>
+<body>
+<div class="demoTable">
+  <!--搜索ID：-->
+  <div class="layui-inline">
+    <input class="layui-input" name="id" id="demoReload" placeholder="输入单位名称搜索" autocomplete="off">
+  </div>
+  <button class="layui-btn" data-type="reload" style="margin-bottom: 20px;">搜索</button>
+</div>
+<table class="layui-hide" id="LAY_table_user" lay-filter="useruv"></table>
+<script type="text/html" id="barDemo">
+<!--  <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="detail">查看</a>-->
+<!--  <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="chuli">处理</a>-->
+  <a class="layui-btn layui-btn-xs" lay-event="edit">查看</a>
+  <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+<script type="text/html" id="toolbarDemo">
+  <div class="layui-btn-container">
+    <!--<button class="layui-btn layui-btn-sm " lay-event="addData"><i class="layui-icon layui-icon-add-1"></i>新增</button>-->
+    <button class="layui-btn layui-btn-sm layui-btn-danger" lay-event="deleteData"><i class="layui-icon layui-icon-delete"></i> 批量删除</button>
+  </div>
+</script>
+
+
+<script>
+  layui.use(['layer','jquery','table','element','form','upload','laydate'],function(){
+    var layer = layui.layer,$ = layui.jquery,table = layui.table,
+            element = layui.element,form = layui.form ,upload = layui.upload,laydate = layui.laydate;
+    
+  //ajax
+    var ajaxdel_add_update=function (url,censhu,meth){
+      $.ajax({
+        //请求方式
+        type :meth,
+        //请求的媒体类型
+        contentType: "application/json;charset=UTF-8",
+        //请求地址
+        url : url,
+        //数据，json字符串
+        data :censhu,
+        //使用传统的方法转换数据
+        traditional:true,
+        //请求成功
+        success : function(result) {
+          console.log(result.msg);
+            layer.closeAll();
+            if(result.status){
+              table.reload('expert',{});
+              layer.msg(result.msg,{icon:6})
+            }else{
+              layer.msg(result.msg,{icon:5})
+            }
+
+        },
+        error:function(result){
+          console.log(result);
+        }
+      })
+    }
+    
+    /****列表渲染***/
+    table.render({
+      elem:'#LAY_table_user',
+      title: '用户表',
+      url:'http://localhost:8080/user/getBeans'
+      ,toolbar: '#toolbarDemo'//开启工具栏，此处显示默认图标，可以自定义模板，详见文档
+      ,response:{
+        statusName: 'status' ,// 对应 code
+        msgName: 'msg'  , // 对应 msg
+        statusCode:true,
+        countName: 'count' , // 对应 count
+        dataName: 'list'  // 对应 data
+      }
+      ,request: {
+        limitName: 'size', //每页数据量的参数名，默认：limit
+        pageName:'page'
+      }
+      ,cols: [[ //标题栏
+        {type:'numbers',title:'序号',fixed: 'left',unresize:true},
+        {type:'checkbox', LAY_CHECKED: false,fixed: 'left'} //默认全选
+        ,{field: 'name',title: '名称', align:'center',unresize:true}
+        ,{field: 'age',title: '年龄', align:'center',unresize:true}
+        ,{field: 'address',title: '地址', align:'center',unresize:true}
+        ,{deleteFlag: 'right', title:'操作',fixed: 'right', align:'center', toolbar: '#barDemo',unresize:true}
+      ]]
+      ,id:'expert'
+      ,skin: 'row' //表格风格
+      ,even: true
+      ,page: true //是否显示分页
+      ,limits: [8, 10]
+      ,limit: 1 //每页默认显示的数量
+    });
+    /****列表渲染***/
+    
+    /***监听头工具栏事件***/
+    table.on('toolbar(useruv)', function(obj){
+      var checkStatus = table.checkStatus(obj.config.id)
+        ,data = checkStatus.data; //获取选中的数据
+      switch(obj.event){
+        /* case 'addData':
+          //添加
+          var index = layer.open({
+            title:'添加仪器',
+            fixed:true,
+            resize:false,
+            move: false,
+            type: 1,
+            area: ['40%', '600px'], //宽高
+            content: $('#motai'), //这里content是一个普通的String
+            cancel: function(index, layero){
+              var ss = layer.confirm('正在编辑中，确定要关闭吗？', {
+                btn: ['确定','取消'] //按钮
+                }, function(){
+                  //置空表单
+                  clearform();
+                  layer.close(index)
+                  layer.close(ss)
+
+                }, function(){
+                layer.close(ss)
+              });
+              return false;
+            }
+          })
+          break; */
+        case 'deleteData':
+
+          //删除
+          if(data.length === 0){
+            layer.msg('请选择一行',{icon:5});
+          } else {
+            var id = [];
+            for(var i = 0;i<data.length;i++){
+              id.push(data[i].id)
+            }
+            layer.confirm('确定删除吗？', function(index){
+              ajaxdel_add_update('http://127.0.0.1:60001/instrument-shared/service/appointment/deleteBean',{"id":id},"GET")
+              layer.close(index);
+            });
+          }
+          break;
+      };
+    });
+    /***监听头工具栏事件***/
+    
+    /***监听行工具事件***/
+    table.on('tool(useruv)', function(obj){ //注：tool 是工具条事件名，test 是 table 原始容器的属性 lay-filter="对应的值"
+      var data = obj.data //获得当前行数据
+        ,layEvent = obj.event; //获得 lay-event 对应的值
+      if(layEvent === 'del'){
+        layer.confirm('确定删除吗？', function(index){
+          ajaxdel_add_update('http://localhost:8080/user/deleteBean',{"id":[data.id]},"GET")
+          layer.close(index);
+        });
+      } else if(layEvent === 'edit'){
+        // 查看/更新
+        Byid(data);
+      }else if(layEvent == 'chuli'){
+    	  //处理
+    	  
+    	  layer.open({
+			  content: '是否同意预约？'
+			  ,btn: ['同意', '拒绝']
+			  ,yes: function(index, layero){
+			    //按钮【按钮一】的回调
+			    ajaxdel_add_update('http://127.0.0.1:60001/instrument-shared/service/appointment/disposeBean',JSON.stringify({"id":data.id,"status":'1'}),"POST")
+			  }
+			  ,btn2: function(index, layero){
+			    //按钮【按钮二】的回调
+   			    ajaxdel_add_update('http://127.0.0.1:60001/instrument-shared/service/appointment/disposeBean',JSON.stringify({"id":data.id,"status":'2'}),"POST")
+			    return false //开启该代码可禁止点击该按钮关闭
+			  }
+			  ,cancel: function(){ 
+			    //右上角关闭回调
+			    //return false //开启该代码可禁止点击该按钮关闭
+			  }
+			});
+    	  
+    	  //console.log("sds")
+    	  
+      }
+    });
+    /***监听行工具事件***/
+  
+  })
+</script>
+</body>
+</html>
